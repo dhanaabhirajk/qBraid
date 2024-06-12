@@ -287,6 +287,89 @@ def decompose_ch(gate: ast.QuantumGate) -> List[ast.Statement]:
     return transform_program(ast.Program(statements=statements)).statements
 
 
+def decompose_ccx(gate: ast.QuantumGate) -> List[ast.Statement]:
+    """Decompose a ccx gate into its basic gate equivalents."""
+    control_qubit1 = gate.qubits[0]
+    control_qubit2 = gate.qubits[1]
+    target = gate.qubits[2]
+
+    h_target = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="h"), arguments=[], qubits=[target]
+    )
+    cx_control_qubit2_target = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="cx"), arguments=[], qubits=[control_qubit2, target]
+    )
+    tdg_target = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="tdg"), arguments=[], qubits=[target]
+    )
+    cx_control_qubit1_target = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="cx"), arguments=[], qubits=[control_qubit1, target]
+    )
+    t_target = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="t"), arguments=[], qubits=[target]
+    )
+    t_control_qubit2 = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="t"), arguments=[], qubits=[control_qubit2]
+    )
+    cx_control_qubit1_control_qubit2 = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="cx"),
+        arguments=[],
+        qubits=[control_qubit1, control_qubit2],
+    )
+    t_control_qubit1 = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="t"), arguments=[], qubits=[control_qubit1]
+    )
+    tdg_control_qubit2 = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="tdg"), arguments=[], qubits=[control_qubit2]
+    )
+
+    return [
+        h_target,
+        cx_control_qubit2_target,
+        tdg_target,
+        cx_control_qubit1_target,
+        t_target,
+        cx_control_qubit2_target,
+        tdg_target,
+        cx_control_qubit1_target,
+        t_target,
+        t_control_qubit2,
+        cx_control_qubit1_control_qubit2,
+        h_target,
+        t_control_qubit1,
+        tdg_control_qubit2,
+        cx_control_qubit1_control_qubit2,
+    ]
+
+
+def decompose_cswap(gate: ast.QuantumGate) -> List[ast.Statement]:
+    """Decompose a cswap gate into its basic gate equivalents."""
+    control = gate.qubits[0]
+    target1 = gate.qubits[1]
+    target2 = gate.qubits[2]
+
+    ccx_control_target2_target1 = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="ccx"),
+        arguments=[],
+        qubits=[control, target2, target1],
+    )
+    ccx_control_target1_target2 = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="ccx"),
+        arguments=[],
+        qubits=[control, target1, target2],
+    )
+
+    statements = [
+        ccx_control_target2_target1,
+        ccx_control_target1_target2,
+        ccx_control_target2_target1,
+    ]
+    return transform_program(ast.Program(statements=statements)).statements
+
+
 def transform_program(program: ast.Program) -> ast.Program:
     """Transform a QASM program, decomposing crx gates."""
     transformed_statements = []
@@ -306,6 +389,10 @@ def transform_program(program: ast.Program) -> ast.Program:
                 transformed_statements.extend(decompose_cp(statement))
             elif statement.name.name == "ch":
                 transformed_statements.extend(decompose_ch(statement))
+            elif statement.name.name == "ccx":
+                transformed_statements.extend(decompose_ccx(statement))
+            elif statement.name.name == "cswap":
+                transformed_statements.extend(decompose_cswap(statement))
             else:
                 transformed_statements.append(statement)
         else:
