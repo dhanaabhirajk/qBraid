@@ -101,6 +101,42 @@ cx q[0], q[1];
 s q[0];
 """,
         ),
+        (
+            """OPENQASM 3.0;
+include "stdgates.inc";"
+qubit[2] q;
+cp(pi) q[0], q[1];""",
+            """OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+rz(pi / 2) q[1];
+rz(pi / 2) q[0];
+rz(pi / 2) q[1];
+cx q[0], q[1];
+rz(-(pi / 2)) q[1];
+cx q[0], q[1];
+s q[0];
+rz(-(pi / 2)) q[0];
+rz(-(pi / 2)) q[1];
+""",
+        ),
+        (
+            """OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+ch q[0], q[1];""",
+            """OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+ry(-(pi / 4)) q[1];
+rz(pi / 2) q[1];
+cx q[0], q[1];
+rz(-(pi / 2)) q[1];
+cx q[0], q[1];
+s q[0];
+ry(pi / 4) q[1];
+""",
+        ),
     ],
 )
 def test_convert_to_basis_gates(original_program, expected_program):

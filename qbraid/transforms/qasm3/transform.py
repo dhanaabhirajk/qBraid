@@ -180,6 +180,113 @@ def decompose_cz(gate: ast.QuantumGate) -> List[ast.Statement]:
     return transform_program(ast.Program(statements=[crz_pi, s])).statements
 
 
+def decompose_cp(gate: ast.QuantumGate) -> List[ast.Statement]:
+    """Decompose a cp gate into its basic gate equivalents."""
+    theta = gate.arguments[0]
+    control = gate.qubits[0]
+    target = gate.qubits[1]
+
+    rz_pos_theta_half_target = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="rz"),
+        arguments=[
+            ast.BinaryExpression(
+                op=ast.BinaryOperator(17), lhs=theta, rhs=ast.FloatLiteral(value=2)
+            )
+        ],
+        qubits=[target],
+    )
+    rz_pos_theta_half_control = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="rz"),
+        arguments=[
+            ast.BinaryExpression(
+                op=ast.BinaryOperator(17), lhs=theta, rhs=ast.FloatLiteral(value=2)
+            )
+        ],
+        qubits=[control],
+    )
+    cz = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="cz"), arguments=[], qubits=[control, target]
+    )
+    rz_neg_theta_half_control = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="rz"),
+        arguments=[
+            ast.UnaryExpression(
+                ast.UnaryOperator(3),
+                ast.BinaryExpression(
+                    op=ast.BinaryOperator(17), lhs=theta, rhs=ast.FloatLiteral(value=2)
+                ),
+            )
+        ],
+        qubits=[control],
+    )
+    rz_neg_theta_half_target = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="rz"),
+        arguments=[
+            ast.UnaryExpression(
+                ast.UnaryOperator(3),
+                ast.BinaryExpression(
+                    op=ast.BinaryOperator(17), lhs=theta, rhs=ast.FloatLiteral(value=2)
+                ),
+            )
+        ],
+        qubits=[target],
+    )
+    statements = [
+        rz_pos_theta_half_target,
+        rz_pos_theta_half_control,
+        cz,
+        rz_neg_theta_half_control,
+        rz_neg_theta_half_target,
+    ]
+
+    return transform_program(ast.Program(statements=statements)).statements
+
+
+def decompose_ch(gate: ast.QuantumGate) -> List[ast.Statement]:
+    """Decompose a ch gate into its basic gate equivalents."""
+    control = gate.qubits[0]
+    target = gate.qubits[1]
+
+    ry_neg_pi_quarter = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="ry"),
+        arguments=[
+            ast.UnaryExpression(
+                ast.UnaryOperator(3),
+                ast.BinaryExpression(
+                    op=ast.BinaryOperator(17),
+                    lhs=ast.Identifier(name="pi"),
+                    rhs=ast.FloatLiteral(value=4),
+                ),
+            )
+        ],
+        qubits=[target],
+    )
+    cz = ast.QuantumGate(
+        modifiers=[], name=ast.Identifier(name="cz"), arguments=[], qubits=[control, target]
+    )
+    rz_pos_pi_quarter = ast.QuantumGate(
+        modifiers=[],
+        name=ast.Identifier(name="ry"),
+        arguments=[
+            ast.BinaryExpression(
+                op=ast.BinaryOperator(17),
+                lhs=ast.Identifier(name="pi"),
+                rhs=ast.FloatLiteral(value=4),
+            )
+        ],
+        qubits=[target],
+    )
+
+    statements = [ry_neg_pi_quarter, cz, rz_pos_pi_quarter]
+
+    return transform_program(ast.Program(statements=statements)).statements
+
+
 def transform_program(program: ast.Program) -> ast.Program:
     """Transform a QASM program, decomposing crx gates."""
     transformed_statements = []
@@ -195,6 +302,10 @@ def transform_program(program: ast.Program) -> ast.Program:
                 transformed_statements.extend(decompose_cy(statement))
             elif statement.name.name == "cz":
                 transformed_statements.extend(decompose_cz(statement))
+            elif statement.name.name == "cp":
+                transformed_statements.extend(decompose_cp(statement))
+            elif statement.name.name == "ch":
+                transformed_statements.extend(decompose_ch(statement))
             else:
                 transformed_statements.append(statement)
         else:
